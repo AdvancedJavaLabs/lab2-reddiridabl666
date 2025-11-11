@@ -3,7 +3,6 @@ package producer
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +10,7 @@ import (
 	"strings"
 
 	"queue-lab/cmd/common"
+	"queue-lab/cmd/utils"
 	"queue-lab/internal/pkg/dto"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -22,19 +22,15 @@ const (
 
 type Producer struct {
 	input io.Reader
-	done  func()
 }
 
-func New(input io.Reader, done func()) Producer {
+func New(input io.Reader) Producer {
 	return Producer{
 		input: input,
-		done:  done,
 	}
 }
 
 func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
-	defer p.done()
-
 	if err := ch.ExchangeDeclare(common.ProducerExchange, "fanout", false, true, false, false, nil); err != nil {
 		return fmt.Errorf("declare exchange: %w", err)
 	}
@@ -48,18 +44,13 @@ func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
 	sendChunk := func() error {
 		log.Println("Sending chunk", chunkID)
 
-		payload, err := json.Marshal(dto.Task{
+		msg := dto.ProducerMessage{
 			ID:      chunkID,
+			Type:    dto.MessageTypeTask,
 			Payload: strings.Join(currentLines, "\n"),
-		})
-		if err != nil {
-			return fmt.Errorf("marshal: %w", err)
 		}
 
-		err = ch.PublishWithContext(ctx, common.ProducerExchange, "", true, false, amqp.Publishing{
-			ContentType: "application/json",
-			Body:        payload,
-		})
+		err := utils.Publish(ctx, ch, common.ProducerExchange, "", msg)
 		if err != nil {
 			return fmt.Errorf("publish: %w", err)
 		}
@@ -99,7 +90,16 @@ func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
 		}
 	}
 
-	<-ctx.Done()
+	log.Println("Done processing file, sending fin")
+
+	msg := dto.ProducerMessage{
+		Type: dto.MessageTypeFin,
+	}
+
+	err := utils.Publish(ctx, ch, common.ProducerExchange, "", msg)
+	if err != nil {
+		return fmt.Errorf("publish: %w", err)
+	}
 
 	return nil
 }

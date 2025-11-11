@@ -5,8 +5,9 @@ import (
 	"flag"
 	"log"
 	"os"
-	"os/signal"
+	"sync"
 
+	"queue-lab/cmd/aggregator"
 	"queue-lab/cmd/counter"
 	"queue-lab/cmd/producer"
 
@@ -18,10 +19,10 @@ type Handler interface {
 }
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
+	// ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	// defer cancel()
 
-	waitCh := make(chan struct{})
+	ctx := context.Background()
 
 	inputFilePath := flag.String("in", "assets/sample.txt", "Input file path")
 
@@ -39,13 +40,16 @@ func main() {
 	}
 	defer inputFile.Close()
 
+	wg := sync.WaitGroup{}
+
 	handlers := []Handler{
-		producer.New(inputFile, func() { /* waitCh <- struct{}{} */ }),
+		producer.New(inputFile),
 		counter.New(),
+		aggregator.New(),
 	}
 
 	for _, handler := range handlers {
-		go func() {
+		wg.Go(func() {
 			channel, err := connection.Channel()
 			if err != nil {
 				log.Fatal("Create channel:", err)
@@ -56,8 +60,8 @@ func main() {
 			if err != nil {
 				log.Println("Handler error", err)
 			}
-		}()
+		})
 	}
 
-	<-waitCh
+	wg.Wait()
 }

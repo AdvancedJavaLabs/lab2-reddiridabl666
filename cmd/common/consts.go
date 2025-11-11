@@ -2,4 +2,7 @@ package common
 
 const ProducerExchange = "dws-parallel"
 
-const Punctuation = `,..;:"'()!?#`
+const (
+	CounterInput  = "counter-input"
+	CounterOutput = "counter-output"
+)
