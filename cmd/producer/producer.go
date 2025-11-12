@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	"queue-lab/cmd/common"
@@ -30,6 +29,10 @@ func New(input io.Reader) Producer {
 	}
 }
 
+func (p Producer) log(format string, values ...any) {
+	utils.Log("[PRODUCER]", format, values...)
+}
+
 func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
 	if err := ch.ExchangeDeclare(common.ProducerExchange, "fanout", false, true, false, false, nil); err != nil {
 		return fmt.Errorf("declare exchange: %w", err)
@@ -42,7 +45,7 @@ func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
 	reader := bufio.NewReader(p.input)
 
 	sendChunk := func() error {
-		log.Println("Sending chunk", chunkID)
+		p.log("Sending chunk %d", chunkID)
 
 		msg := dto.ProducerMessage{
 			ID:      chunkID,
@@ -90,7 +93,7 @@ func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
 		}
 	}
 
-	log.Println("Done processing file, sending fin")
+	p.log("Done processing file, sending fin")
 
 	msg := dto.ProducerMessage{
 		Type: dto.MessageTypeFin,

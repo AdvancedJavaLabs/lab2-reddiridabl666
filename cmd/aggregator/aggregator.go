@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
 
 	"queue-lab/cmd/common"
@@ -21,7 +20,11 @@ func New() Aggregator {
 	return Aggregator{}
 }
 
-func (p Aggregator) Run(ctx context.Context, ch *amqp.Channel) error {
+func (a Aggregator) log(format string, values ...any) {
+	utils.Log("[AGGREGATOR]", format, values...)
+}
+
+func (a Aggregator) Run(ctx context.Context, ch *amqp.Channel) error {
 	id := uuid.NewString()
 
 	counterQueue, err := ch.ConsumeWithContext(ctx, common.CounterOutput, "aggregator-"+id, true, false, false, false, nil)
@@ -49,7 +52,7 @@ func (p Aggregator) Run(ctx context.Context, ch *amqp.Channel) error {
 
 			err = json.Unmarshal(message.Body, &msg)
 			if err != nil {
-				log.Println("unmarshal:", err)
+				a.log("Unmarshal error: %s", err)
 				continue
 			}
 
@@ -60,12 +63,15 @@ func (p Aggregator) Run(ctx context.Context, ch *amqp.Channel) error {
 			result += msg.Count
 		}
 
-		log.Println("[AGGREGATOR] Total count is:", result)
+		a.log("Total count is: %d", result)
 
 		err = utils.Publish(ctx, ch, "", common.AggregatorOutput, dto.AggregatorResult{
 			Type:   dto.ResultTypeCount,
 			Result: result,
 		})
+		if err != nil {
+			a.log("Publish error: %s", err)
+		}
 	})
 
 	wg.Wait()

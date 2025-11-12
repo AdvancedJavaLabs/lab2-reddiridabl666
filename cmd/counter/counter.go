@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -25,7 +25,11 @@ func New() Counter {
 	return Counter{}
 }
 
-func (с Counter) Run(ctx context.Context, ch *amqp.Channel) error {
+func (c Counter) log(format string, values ...any) {
+	utils.Log("[COUNTER]", format, values...)
+}
+
+func (c Counter) Run(ctx context.Context, ch *amqp.Channel) error {
 	id := uuid.NewString()
 
 	_, err := ch.QueueDeclare(common.CounterInput, true, false, false, false, nil)
@@ -56,7 +60,7 @@ func (с Counter) Run(ctx context.Context, ch *amqp.Channel) error {
 
 			err = json.Unmarshal(message.Body, &msg)
 			if err != nil {
-				log.Println("unmarshal:", err)
+				c.log("Unmarshal error: %s", err)
 				continue
 			}
 
@@ -66,15 +70,20 @@ func (с Counter) Run(ctx context.Context, ch *amqp.Channel) error {
 
 			wg.Go(func() {
 				normalized := punctuation.ReplaceAllString(msg.Payload, " ")
-				count := len(strings.Split(normalized, " "))
 
-				log.Printf("Word count of chunk %d is %d\n", msg.ID, count)
+				words := slices.DeleteFunc(strings.Split(normalized, " "), func(word string) bool {
+					return word == ""
+				})
+
+				count := len(words)
+
+				c.log("Word count of chunk %d is %d", msg.ID, count)
 
 				err := utils.Publish(ctx, ch, "", common.CounterOutput, dto.CounterResult{
 					Count: count,
 				})
 				if err != nil {
-					log.Println("publish:", err)
+					c.log("Publish error: %w", err)
 				}
 			})
 		}
@@ -82,13 +91,13 @@ func (с Counter) Run(ctx context.Context, ch *amqp.Channel) error {
 
 	wg.Wait()
 
-	log.Println("Counter got fin - exiting")
+	c.log("Got fin - exiting")
 
 	err = utils.Publish(ctx, ch, "", common.CounterOutput, dto.CounterResult{
 		Count: -1,
 	})
 	if err != nil {
-		log.Println("publish:", err)
+		c.log("Publish error: %w", err)
 	}
 
 	return nil

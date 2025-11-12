@@ -9,6 +9,7 @@ import (
 
 	"queue-lab/cmd/aggregator"
 	"queue-lab/cmd/counter"
+	frequency "queue-lab/cmd/frequency_counter"
 	"queue-lab/cmd/producer"
 	resultsink "queue-lab/cmd/result_sink"
 
@@ -46,6 +47,7 @@ func main() {
 	handlers := []Handler{
 		producer.New(inputFile),
 		counter.New(),
+		frequency.New(),
 		aggregator.New(),
 		resultsink.New(),
 	}

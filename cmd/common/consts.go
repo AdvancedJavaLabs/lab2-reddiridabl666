@@ -7,4 +7,9 @@ const (
 	CounterOutput = "counter-output"
 )
 
+const (
+	FrequencyInput  = "frequency-input"
+	FrequencyOutput = "frequency-output"
+)
+
 const AggregatorOutput = "aggregator-output"

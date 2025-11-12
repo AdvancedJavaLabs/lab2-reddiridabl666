@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 
 	"queue-lab/cmd/common"
+	"queue-lab/cmd/utils"
 	"queue-lab/internal/pkg/dto"
 
 	"github.com/google/uuid"
@@ -21,7 +21,11 @@ func New() ResultSink {
 	return ResultSink{}
 }
 
-func (p ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
+func (r ResultSink) log(format string, values ...any) {
+	utils.Log("[RESULT SINK]", format, values...)
+}
+
+func (r ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 	id := uuid.NewString()
 
 	_, err := ch.QueueDeclare(common.AggregatorOutput, true, false, false, false, nil)
@@ -48,12 +52,12 @@ func (p ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 
 			err = json.Unmarshal(message.Body, &msg)
 			if err != nil {
-				log.Println("unmarshal:", err)
+				r.log("Unmarshal error: %s", err)
 				continue
 			}
 
 			if _, ok := resultTypes[msg.Type]; ok {
-				log.Printf("[RESULT SINK] Already seen result for %s, skipping\n", msg.Type)
+				r.log("Already seen result for %s, skipping", msg.Type)
 				continue
 			}
 
@@ -84,6 +88,8 @@ func (p ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 	if err != nil {
 		return fmt.Errorf("encode result: %w", err)
 	}
+
+	r.log("Written result file")
 
 	return nil
 }
