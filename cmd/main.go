@@ -10,6 +10,7 @@ import (
 	"queue-lab/cmd/aggregator"
 	"queue-lab/cmd/counter"
 	"queue-lab/cmd/producer"
+	resultsink "queue-lab/cmd/result_sink"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -46,6 +47,7 @@ func main() {
 		producer.New(inputFile),
 		counter.New(),
 		aggregator.New(),
+		resultsink.New(),
 	}
 
 	for _, handler := range handlers {

@@ -17,11 +17,6 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const (
-	inputQueue  = "counter-input"
-	outputQueue = "counter-output"
-)
-
 var punctuation = regexp.MustCompile("[,..;:\"'()!?#]\n")
 
 type Counter struct{}

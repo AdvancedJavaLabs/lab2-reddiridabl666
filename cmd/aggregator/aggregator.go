@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"queue-lab/cmd/common"
+	"queue-lab/cmd/utils"
 	"queue-lab/internal/pkg/dto"
 
 	"github.com/google/uuid"
@@ -26,6 +27,16 @@ func (p Aggregator) Run(ctx context.Context, ch *amqp.Channel) error {
 	counterQueue, err := ch.ConsumeWithContext(ctx, common.CounterOutput, "aggregator-"+id, true, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("consume: %w", err)
+	}
+
+	_, err = ch.QueueDeclare(common.CounterOutput, true, false, false, false, nil)
+	if err != nil {
+		return fmt.Errorf("declare input queue: %w", err)
+	}
+
+	_, err = ch.QueueDeclare(common.AggregatorOutput, true, false, false, false, nil)
+	if err != nil {
+		return fmt.Errorf("declare output queue: %w", err)
 	}
 
 	wg := sync.WaitGroup{}
@@ -50,6 +61,11 @@ func (p Aggregator) Run(ctx context.Context, ch *amqp.Channel) error {
 		}
 
 		log.Println("[AGGREGATOR] Total count is:", result)
+
+		err = utils.Publish(ctx, ch, "", common.AggregatorOutput, dto.AggregatorResult{
+			Type:   dto.ResultTypeCount,
+			Result: result,
+		})
 	})
 
 	wg.Wait()
