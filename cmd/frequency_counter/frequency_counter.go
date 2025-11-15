@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"queue-lab/cmd/common"
 	"queue-lab/cmd/utils"
@@ -16,12 +16,14 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-var punctuation = regexp.MustCompile("[,..;:\"'()!?#]\n")
+type FrequencyCounter struct {
+	minUnicodeLength int
+}
 
-type FrequencyCounter struct{}
-
-func New() FrequencyCounter {
-	return FrequencyCounter{}
+func New(minUnicodeLength int) FrequencyCounter {
+	return FrequencyCounter{
+		minUnicodeLength: minUnicodeLength,
+	}
 }
 
 func (c FrequencyCounter) log(format string, values ...any) {
@@ -70,11 +72,11 @@ func (f FrequencyCounter) Run(ctx context.Context, ch *amqp.Channel) error {
 			wg.Go(func() {
 				frequencies := make(map[string]int)
 
-				normalized := punctuation.ReplaceAllString(msg.Payload, " ")
+				normalized := common.Punctuation.ReplaceAllString(msg.Payload, " ")
 
 				for word := range strings.SplitSeq(normalized, " ") {
-					if word != "" {
-						frequencies[word] += 1
+					if utf8.RuneCountInString(word) >= f.minUnicodeLength {
+						frequencies[strings.ToLower(word)] += 1
 					}
 				}
 

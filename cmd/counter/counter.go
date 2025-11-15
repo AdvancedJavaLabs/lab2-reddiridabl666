@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -16,8 +15,6 @@ import (
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
-
-var punctuation = regexp.MustCompile("[,..;:\"'()!?#]\n")
 
 type Counter struct{}
 
@@ -69,7 +66,7 @@ func (c Counter) Run(ctx context.Context, ch *amqp.Channel) error {
 			}
 
 			wg.Go(func() {
-				normalized := punctuation.ReplaceAllString(msg.Payload, " ")
+				normalized := common.Punctuation.ReplaceAllString(msg.Payload, " ")
 
 				words := slices.DeleteFunc(strings.Split(normalized, " "), func(word string) bool {
 					return word == ""

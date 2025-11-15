@@ -1,5 +1,6 @@
 package dto
 
 type Result struct {
-	Count int `json:"count"`
+	Count int         `json:"count"`
+	TopN  []WordCount `json:"topN"`
 }

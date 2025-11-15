@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -20,13 +21,18 @@ type Handler interface {
 	Run(ctx context.Context, channel *amqp.Channel) error
 }
 
+var (
+	inputFilePath = flag.String("in", "assets/sample.txt", "Input file path")
+
+	outputFilePath = flag.String("o", "", "Output file path")
+
+	topN = flag.Int("n", 5, "Number of top word frequencies")
+
+	minLength = flag.Int("minLength", 1, "Minimum word length for the word to be included in the top N output")
+)
+
 func main() {
-	// ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	// defer cancel()
-
 	ctx := context.Background()
-
-	inputFilePath := flag.String("in", "assets/sample.txt", "Input file path")
 
 	flag.Parse()
 
@@ -42,14 +48,24 @@ func main() {
 	}
 	defer inputFile.Close()
 
+	var outputFile io.WriteCloser
+
+	if *outputFilePath != "" {
+		outputFile, err = os.Create(*outputFilePath)
+		if err != nil {
+			log.Fatal("Open output file:", err)
+		}
+		defer outputFile.Close()
+	}
+
 	wg := sync.WaitGroup{}
 
 	handlers := []Handler{
 		producer.New(inputFile),
 		counter.New(),
-		frequency.New(),
-		aggregator.New(),
-		resultsink.New(),
+		frequency.New(*minLength),
+		aggregator.New(*topN),
+		resultsink.New(outputFile),
 	}
 
 	for _, handler := range handlers {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
+	"io"
 	"sync"
 
 	"queue-lab/cmd/common"
@@ -15,10 +15,14 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type ResultSink struct{}
+type ResultSink struct {
+	output io.Writer
+}
 
-func New() ResultSink {
-	return ResultSink{}
+func New(output io.Writer) ResultSink {
+	return ResultSink{
+		output: output,
+	}
 }
 
 func (r ResultSink) log(format string, values ...any) {
@@ -42,7 +46,7 @@ func (r ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 
 	resultTypes := make(map[dto.ResultType]struct{})
 
-	awaitingResults := 1
+	awaitingResults := 2
 
 	result := dto.Result{}
 
@@ -63,10 +67,13 @@ func (r ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 
 			switch msg.Type {
 			case dto.ResultTypeCount:
-				result.Count = int(msg.Result.(float64))
-			}
+				result.Count = *msg.Count
+				resultTypes[dto.ResultTypeCount] = struct{}{}
 
-			resultTypes[dto.ResultTypeCount] = struct{}{}
+			case dto.ResultTypeTopN:
+				result.TopN = msg.TopN
+				resultTypes[dto.ResultTypeTopN] = struct{}{}
+			}
 
 			if len(resultTypes) >= awaitingResults {
 				break
@@ -76,20 +83,25 @@ func (r ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 
 	wg.Wait()
 
-	file, err := os.Create("output.json")
-	if err != nil {
-		return fmt.Errorf("create output file: %w", err)
+	if r.output != nil {
+		encoder := json.NewEncoder(r.output)
+
+		err = encoder.Encode(result)
+		if err != nil {
+			return fmt.Errorf("encode result: %w", err)
+		}
+
+		r.log("Written result file")
+	} else {
+		fmt.Println("\nWord count:", result.Count)
+
+		topN := ""
+		for _, item := range result.TopN {
+			topN += fmt.Sprintf("%s: %d; ", item.Word, item.Count)
+		}
+
+		fmt.Printf("Top %d words by frequency: %s\n", len(result.TopN), topN)
 	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-
-	err = encoder.Encode(result)
-	if err != nil {
-		return fmt.Errorf("encode result: %w", err)
-	}
-
-	r.log("Written result file")
 
 	return nil
 }

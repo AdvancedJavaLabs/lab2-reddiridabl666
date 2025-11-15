@@ -1,5 +1,7 @@
 package common
 
+import "regexp"
+
 const ProducerExchange = "dws-parallel"
 
 const (
@@ -13,3 +15,5 @@ const (
 )
 
 const AggregatorOutput = "aggregator-output"
+
+var Punctuation = regexp.MustCompile("[,..;:\"'()!?#\n]")
