@@ -61,7 +61,7 @@ func (c Counter) Run(ctx context.Context, ch *amqp.Channel) error {
 				continue
 			}
 
-			if msg.Type == dto.MessageTypeFin {
+			if msg.ChunkID == -1 {
 				return
 			}
 
@@ -74,7 +74,7 @@ func (c Counter) Run(ctx context.Context, ch *amqp.Channel) error {
 
 				count := len(words)
 
-				c.log("Word count of chunk %d is %d", msg.ID, count)
+				c.log("Word count of chunk %d is %d", msg.ChunkID, count)
 
 				err := utils.Publish(ctx, ch, "", common.CounterOutput, dto.CounterResult{
 					Count: count,

@@ -46,7 +46,7 @@ func (r ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 
 	resultTypes := make(map[dto.ResultType]struct{})
 
-	awaitingResults := 2
+	awaitingResults := 3
 
 	result := dto.Result{}
 
@@ -73,6 +73,10 @@ func (r ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 			case dto.ResultTypeTopN:
 				result.TopN = msg.TopN
 				resultTypes[dto.ResultTypeTopN] = struct{}{}
+
+			case dto.ResultTypeSentiment:
+				result.Sentiment = *msg.Sentiment
+				resultTypes[dto.ResultTypeSentiment] = struct{}{}
 			}
 
 			if len(resultTypes) >= awaitingResults {
@@ -101,6 +105,8 @@ func (r ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 		}
 
 		fmt.Printf("Top %d words by frequency: %s\n", len(result.TopN), topN)
+
+		fmt.Printf("Sentiment: %f\n", result.Sentiment)
 	}
 
 	return nil

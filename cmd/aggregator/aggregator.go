@@ -46,6 +46,11 @@ func (a Aggregator) Run(ctx context.Context, ch *amqp.Channel) error {
 		return fmt.Errorf("aggregate frequencies: %w", err)
 	}
 
+	err = a.aggregateSentiment(ctx, &wg, ch, id)
+	if err != nil {
+		return fmt.Errorf("aggregate frequencies: %w", err)
+	}
+
 	wg.Wait()
 
 	return nil

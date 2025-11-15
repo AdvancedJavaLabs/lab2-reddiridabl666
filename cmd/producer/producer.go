@@ -48,8 +48,7 @@ func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
 		p.log("Sending chunk %d", chunkID)
 
 		msg := dto.ProducerMessage{
-			ID:      chunkID,
-			Type:    dto.MessageTypeTask,
+			ChunkID: chunkID,
 			Payload: strings.Join(currentLines, "\n"),
 		}
 
@@ -96,7 +95,7 @@ func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
 	p.log("Done processing file, sending fin")
 
 	msg := dto.ProducerMessage{
-		Type: dto.MessageTypeFin,
+		ChunkID: -1,
 	}
 
 	err := utils.Publish(ctx, ch, common.ProducerExchange, "", msg)

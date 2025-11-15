@@ -65,7 +65,7 @@ func (f FrequencyCounter) Run(ctx context.Context, ch *amqp.Channel) error {
 				continue
 			}
 
-			if msg.Type == dto.MessageTypeFin {
+			if msg.ChunkID == -1 {
 				return
 			}
 

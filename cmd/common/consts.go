@@ -14,6 +14,21 @@ const (
 	FrequencyOutput = "frequency-output"
 )
 
+const (
+	SentimentInput  = "sentiment-input"
+	SentimentOutput = "sentiment-output"
+)
+
+const (
+	ReplaceInput  = "replace-input"
+	ReplaceOutput = "replace-output"
+)
+
+const (
+	SortInput  = "sort-input"
+	SortOutput = "sort-output"
+)
+
 const AggregatorOutput = "aggregator-output"
 
 var Punctuation = regexp.MustCompile("[,..;:\"'()!?#\n]")

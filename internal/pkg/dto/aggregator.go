@@ -11,9 +11,10 @@ const (
 )
 
 type AggregatorResult struct {
-	Type  ResultType  `json:"type"`
-	Count *int        `json:"count,omitempty"`
-	TopN  []WordCount `json:"topN,omitempty"`
+	Type      ResultType  `json:"type"`
+	Count     *int        `json:"count,omitempty"`
+	TopN      []WordCount `json:"topN,omitempty"`
+	Sentiment *float64    `json:"sentiment,omitempty"`
 }
 
 type WordCount struct {

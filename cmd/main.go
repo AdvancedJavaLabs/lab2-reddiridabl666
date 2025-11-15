@@ -10,9 +10,10 @@ import (
 
 	"queue-lab/cmd/aggregator"
 	"queue-lab/cmd/counter"
-	frequency "queue-lab/cmd/frequency_counter"
+	"queue-lab/cmd/frequency"
 	"queue-lab/cmd/producer"
 	resultsink "queue-lab/cmd/result_sink"
+	"queue-lab/cmd/sentiment"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -42,6 +43,10 @@ func main() {
 	}
 	defer connection.Close()
 
+	if *topN < 1 {
+		*topN = 1
+	}
+
 	inputFile, err := os.Open(*inputFilePath)
 	if err != nil {
 		log.Fatal("Open input file:", err)
@@ -64,6 +69,7 @@ func main() {
 		producer.New(inputFile),
 		counter.New(),
 		frequency.New(*minLength),
+		sentiment.New(),
 		aggregator.New(*topN),
 		resultsink.New(outputFile),
 	}
