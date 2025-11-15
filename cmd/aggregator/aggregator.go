@@ -48,7 +48,12 @@ func (a Aggregator) Run(ctx context.Context, ch *amqp.Channel) error {
 
 	err = a.aggregateSentiment(ctx, &wg, ch, id)
 	if err != nil {
-		return fmt.Errorf("aggregate frequencies: %w", err)
+		return fmt.Errorf("aggregate sentiment: %w", err)
+	}
+
+	err = a.aggregateSort(ctx, &wg, ch, id)
+	if err != nil {
+		return fmt.Errorf("aggregate sorted sentences: %w", err)
 	}
 
 	wg.Wait()

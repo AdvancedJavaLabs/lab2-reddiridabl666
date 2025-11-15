@@ -14,6 +14,7 @@ import (
 	"queue-lab/cmd/producer"
 	resultsink "queue-lab/cmd/result_sink"
 	"queue-lab/cmd/sentiment"
+	"queue-lab/cmd/sorter"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -70,6 +71,7 @@ func main() {
 		counter.New(),
 		frequency.New(*minLength),
 		sentiment.New(),
+		sorter.New(),
 		aggregator.New(*topN),
 		resultsink.New(outputFile),
 	}

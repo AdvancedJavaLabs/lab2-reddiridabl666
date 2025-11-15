@@ -15,6 +15,8 @@ type AggregatorResult struct {
 	Count     *int        `json:"count,omitempty"`
 	TopN      []WordCount `json:"topN,omitempty"`
 	Sentiment *float64    `json:"sentiment,omitempty"`
+	Sorted    []string    `json:"sorted,omitempty"`
+	Replaced  string      `json:"replaced,omitempty"`
 }
 
 type WordCount struct {

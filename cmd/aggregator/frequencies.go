@@ -63,6 +63,8 @@ func (a Aggregator) aggregateFrequencies(ctx context.Context, wg *sync.WaitGroup
 			})
 		}
 
+		a.log("Found top %d words", a.topN)
+
 		err = utils.Publish(ctx, ch, "", common.AggregatorOutput, dto.AggregatorResult{
 			Type: dto.ResultTypeTopN,
 			TopN: sortedResult,

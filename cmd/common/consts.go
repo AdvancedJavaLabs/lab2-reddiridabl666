@@ -31,4 +31,4 @@ const (
 
 const AggregatorOutput = "aggregator-output"
 
-var Punctuation = regexp.MustCompile("[,..;:\"'()!?#\n]")
+var Punctuation = regexp.MustCompile("[,.;:\"'()!?#\n]")
