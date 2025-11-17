@@ -6,20 +6,20 @@ import (
 	"fmt"
 	"sync"
 
-	"queue-lab/cmd/common"
-	"queue-lab/cmd/utils"
+	"queue-lab/internal/pkg/common"
 	"queue-lab/internal/pkg/dto"
+	"queue-lab/internal/pkg/utils"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func (a Aggregator) aggregateSort(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, id string) error {
-	_, err := ch.QueueDeclare(common.SortOutput, true, false, false, false, nil)
+	_, err := ch.QueueDeclare(common.SorterOutput, true, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("declare input queue: %w", err)
 	}
 
-	counterQueue, err := ch.ConsumeWithContext(ctx, common.SortOutput, "aggregator-sort"+id, true, false, false, false, nil)
+	counterQueue, err := ch.ConsumeWithContext(ctx, common.SorterOutput, "aggregator-sort"+id, true, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("consume: %w", err)
 	}

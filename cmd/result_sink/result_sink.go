@@ -7,9 +7,9 @@ import (
 	"io"
 	"sync"
 
-	"queue-lab/cmd/common"
-	"queue-lab/cmd/utils"
+	"queue-lab/internal/pkg/common"
 	"queue-lab/internal/pkg/dto"
+	"queue-lab/internal/pkg/utils"
 
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -46,7 +46,7 @@ func (r ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 
 	resultTypes := make(map[dto.ResultType]struct{})
 
-	awaitingResults := 4
+	awaitingResults := 5
 
 	result := dto.Result{}
 
@@ -77,6 +77,10 @@ func (r ResultSink) Run(ctx context.Context, ch *amqp.Channel) error {
 			case dto.ResultTypeSentiment:
 				result.Sentiment = *msg.Sentiment
 				resultTypes[dto.ResultTypeSentiment] = struct{}{}
+
+			case dto.ResultTypeReplace:
+				result.Replaced = msg.Replaced
+				resultTypes[dto.ResultTypeReplace] = struct{}{}
 
 			case dto.ResultTypeSort:
 				result.Sorted = msg.Sorted

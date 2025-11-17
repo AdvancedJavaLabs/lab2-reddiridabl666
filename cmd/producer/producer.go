@@ -8,15 +8,15 @@ import (
 	"io"
 	"strings"
 
-	"queue-lab/cmd/common"
-	"queue-lab/cmd/utils"
+	"queue-lab/internal/pkg/common"
 	"queue-lab/internal/pkg/dto"
+	"queue-lab/internal/pkg/utils"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
-	chunkSize = 256
+	chunkSize = 2048
 )
 
 type Producer struct {

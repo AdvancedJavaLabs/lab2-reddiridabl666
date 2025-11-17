@@ -6,22 +6,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"strings"
 	"sync"
 
-	"queue-lab/cmd/common"
-	"queue-lab/cmd/utils"
+	"queue-lab/internal/pkg/common"
 	"queue-lab/internal/pkg/dto"
+	"queue-lab/internal/pkg/utils"
 
 	"github.com/google/uuid"
-	"github.com/neurosnap/sentences"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sentencizer/sentencizer"
 )
 
 type Sorter struct {
 	segmenter sentencizer.Segmenter
-	tokenizer sentences.SentenceTokenizer
 }
 
 func New() Sorter {
@@ -37,22 +34,22 @@ func (s Sorter) log(format string, values ...any) {
 func (s Sorter) Run(ctx context.Context, ch *amqp.Channel) error {
 	id := uuid.NewString()
 
-	_, err := ch.QueueDeclare(common.SortInput, true, false, false, false, nil)
+	_, err := ch.QueueDeclare(common.SorterInput, true, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("declare input queue: %w", err)
 	}
 
-	_, err = ch.QueueDeclare(common.SortOutput, true, false, false, false, nil)
+	_, err = ch.QueueDeclare(common.SorterOutput, true, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("declare output queue: %w", err)
 	}
 
-	err = ch.QueueBind(common.SortInput, "", common.ProducerExchange, false, nil)
+	err = ch.QueueBind(common.SorterInput, "", common.ProducerExchange, false, nil)
 	if err != nil {
 		return fmt.Errorf("bind queue: %w", err)
 	}
 
-	readChan, err := ch.ConsumeWithContext(ctx, common.SortInput, "sort-"+id, true, false, false, false, nil)
+	readChan, err := ch.ConsumeWithContext(ctx, common.SorterInput, "sort-"+id, true, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("consume: %w", err)
 	}
@@ -74,12 +71,6 @@ func (s Sorter) Run(ctx context.Context, ch *amqp.Channel) error {
 			}
 
 			wg.Go(func() {
-				// sentences := lo.Map(s.tokenizer.Tokenize(msg.Payload), func(sentence *sentences.Sentence, _ int) string {
-				// 	return sentence.Text
-				// })
-
-				msg.Payload = strings.ReplaceAll(msg.Payload, "\"", "")
-
 				sentences := s.segmenter.Segment(msg.Payload)
 
 				sentences = slices.DeleteFunc(sentences, func(sentence string) bool {
@@ -90,7 +81,7 @@ func (s Sorter) Run(ctx context.Context, ch *amqp.Channel) error {
 					return cmp.Compare(len(a), len(b))
 				})
 
-				err := utils.Publish(ctx, ch, "", common.SortOutput, dto.SortResult{
+				err := utils.Publish(ctx, ch, "", common.SorterOutput, dto.SortResult{
 					Sentences: sentences,
 				})
 				if err != nil {
@@ -104,7 +95,7 @@ func (s Sorter) Run(ctx context.Context, ch *amqp.Channel) error {
 
 	s.log("Got fin - exiting")
 
-	err = utils.Publish(ctx, ch, "", common.SortOutput, dto.SortResult{})
+	err = utils.Publish(ctx, ch, "", common.SorterOutput, dto.SortResult{})
 	if err != nil {
 		s.log("Publish error: %w", err)
 	}

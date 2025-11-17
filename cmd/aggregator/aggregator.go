@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"queue-lab/cmd/common"
-	"queue-lab/cmd/utils"
+	"queue-lab/internal/pkg/common"
+	"queue-lab/internal/pkg/utils"
 
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -54,6 +54,11 @@ func (a Aggregator) Run(ctx context.Context, ch *amqp.Channel) error {
 	err = a.aggregateSort(ctx, &wg, ch, id)
 	if err != nil {
 		return fmt.Errorf("aggregate sorted sentences: %w", err)
+	}
+
+	err = a.aggregateReplaces(ctx, &wg, ch, id)
+	if err != nil {
+		return fmt.Errorf("aggregate replaced text: %w", err)
 	}
 
 	wg.Wait()

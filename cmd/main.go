@@ -3,18 +3,21 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	"queue-lab/cmd/aggregator"
-	"queue-lab/cmd/counter"
-	"queue-lab/cmd/frequency"
 	"queue-lab/cmd/producer"
 	resultsink "queue-lab/cmd/result_sink"
-	"queue-lab/cmd/sentiment"
-	"queue-lab/cmd/sorter"
+	"queue-lab/cmd/workers/counter"
+	"queue-lab/cmd/workers/frequency"
+	"queue-lab/cmd/workers/replacer"
+	"queue-lab/cmd/workers/sentiment"
+	"queue-lab/cmd/workers/sorter"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -31,6 +34,8 @@ var (
 	topN = flag.Int("n", 5, "Number of top word frequencies")
 
 	minLength = flag.Int("minLength", 1, "Minimum word length for the word to be included in the top N output")
+
+	replaceBy = flag.String("replace", "Amogus", "Value to replace all people names with")
 )
 
 func main() {
@@ -72,9 +77,12 @@ func main() {
 		frequency.New(*minLength),
 		sentiment.New(),
 		sorter.New(),
+		replacer.New(*replaceBy),
 		aggregator.New(*topN),
 		resultsink.New(outputFile),
 	}
+
+	start := time.Now()
 
 	for _, handler := range handlers {
 		wg.Go(func() {
@@ -92,4 +100,6 @@ func main() {
 	}
 
 	wg.Wait()
+
+	fmt.Println("Total time:", time.Since(start).Seconds())
 }

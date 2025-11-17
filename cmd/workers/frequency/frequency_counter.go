@@ -8,9 +8,9 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"queue-lab/cmd/common"
-	"queue-lab/cmd/utils"
+	"queue-lab/internal/pkg/common"
 	"queue-lab/internal/pkg/dto"
+	"queue-lab/internal/pkg/utils"
 
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -26,7 +26,7 @@ func New(minUnicodeLength int) FrequencyCounter {
 	}
 }
 
-func (c FrequencyCounter) log(format string, values ...any) {
+func (f FrequencyCounter) log(format string, values ...any) {
 	utils.Log("[FREQUENCY]", format, values...)
 }
 

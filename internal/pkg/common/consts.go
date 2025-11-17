@@ -20,13 +20,13 @@ const (
 )
 
 const (
-	ReplaceInput  = "replace-input"
-	ReplaceOutput = "replace-output"
+	ReplacerInput  = "replace-input"
+	ReplacerOutput = "replace-output"
 )
 
 const (
-	SortInput  = "sort-input"
-	SortOutput = "sort-output"
+	SorterInput  = "sort-input"
+	SorterOutput = "sort-output"
 )
 
 const AggregatorOutput = "aggregator-output"

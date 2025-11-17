@@ -9,9 +9,9 @@ import (
 	"slices"
 	"sync"
 
-	"queue-lab/cmd/common"
-	"queue-lab/cmd/utils"
+	"queue-lab/internal/pkg/common"
 	"queue-lab/internal/pkg/dto"
+	"queue-lab/internal/pkg/utils"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
