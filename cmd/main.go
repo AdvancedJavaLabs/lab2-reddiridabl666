@@ -1,0 +1,118 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"runtime"
+	"sync"
+	"time"
+
+	"queue-lab/cmd/aggregator"
+	"queue-lab/cmd/producer"
+	resultsink "queue-lab/cmd/result_sink"
+	"queue-lab/cmd/workers/counter"
+	"queue-lab/cmd/workers/frequency"
+	"queue-lab/cmd/workers/replacer"
+	"queue-lab/cmd/workers/sentiment"
+	"queue-lab/cmd/workers/sorter"
+
+	amqp "github.com/rabbitmq/amqp091-go"
+)
+
+type Handler interface {
+	Run(ctx context.Context, channel *amqp.Channel) error
+}
+
+var (
+	inputFilePath = flag.String("in", "assets/sample.txt", "Input file path")
+
+	outputFilePath = flag.String("o", "", "Output file path")
+
+	topN = flag.Int("n", 5, "Number of top word frequencies")
+
+	minLength = flag.Int("minLength", 1, "Minimum word length for the word to be included in the top N output")
+
+	replaceBy = flag.String("replace", "Amogus", "Value to replace all people names with")
+)
+
+func main() {
+	ctx := context.Background()
+
+	threadNum := runtime.GOMAXPROCS(-1)
+
+	fmt.Println("Using threads:", threadNum)
+
+	flag.Parse()
+
+	connection, err := amqp.Dial(os.Getenv("AMQP_URL"))
+	if err != nil {
+		log.Fatal("Connect to RabbitMQ:", err)
+	}
+	defer connection.Close()
+
+	if *topN < 1 {
+		*topN = 1
+	}
+
+	inputFile, err := os.Open(*inputFilePath)
+	if err != nil {
+		log.Fatal("Open input file:", err)
+	}
+	defer inputFile.Close()
+
+	fileStats, err := inputFile.Stat()
+	if err != nil {
+		log.Fatal("Stat input file:", err)
+	}
+
+	chunkSize := fileStats.Size() / int64(threadNum)
+	fmt.Println("Chunk size is", chunkSize)
+
+	var outputFile io.WriteCloser
+
+	if *outputFilePath != "" {
+		outputFile, err = os.Create(*outputFilePath)
+		if err != nil {
+			log.Fatal("Open output file:", err)
+		}
+		defer outputFile.Close()
+	}
+
+	wg := sync.WaitGroup{}
+
+	handlers := []Handler{
+		producer.New(inputFile, chunkSize),
+		counter.New(),
+		frequency.New(*minLength),
+		sentiment.New(),
+		sorter.New(),
+		replacer.New(*replaceBy),
+		aggregator.New(*topN),
+		resultsink.New(outputFile),
+	}
+
+	start := time.Now()
+
+	for _, handler := range handlers {
+		wg.Go(func() {
+			channel, err := connection.Channel()
+			if err != nil {
+				log.Fatal("Create channel:", err)
+			}
+			defer channel.Close()
+
+			err = handler.Run(ctx, channel)
+			if err != nil {
+				log.Println("Handler error", err)
+			}
+		})
+	}
+
+	wg.Wait()
+
+	fmt.Println("Total time:", time.Since(start).Seconds())
+}
