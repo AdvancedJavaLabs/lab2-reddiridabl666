@@ -15,17 +15,15 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const (
-	chunkSize = 2048
-)
-
 type Producer struct {
-	input io.Reader
+	input     io.Reader
+	chunkSize int64
 }
 
-func New(input io.Reader) Producer {
+func New(input io.Reader, chunkSize int64) Producer {
 	return Producer{
-		input: input,
+		input:     input,
+		chunkSize: chunkSize,
 	}
 }
 
@@ -39,7 +37,7 @@ func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
 	}
 
 	currentLines := []string{}
-	currentLength := 0
+	var currentLength int64 = 0
 	chunkID := 0
 
 	reader := bufio.NewReader(p.input)
@@ -75,9 +73,9 @@ func (p Producer) Run(ctx context.Context, ch *amqp.Channel) error {
 		}
 
 		currentLines = append(currentLines, line)
-		currentLength += len(line)
+		currentLength += int64(len(line))
 
-		if currentLength >= chunkSize {
+		if currentLength >= p.chunkSize {
 			err = sendChunk()
 			if err != nil {
 				return fmt.Errorf("send chunk: %w", err)

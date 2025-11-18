@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -41,6 +42,10 @@ var (
 func main() {
 	ctx := context.Background()
 
+	threadNum := runtime.GOMAXPROCS(-1)
+
+	fmt.Println("Using threads:", threadNum)
+
 	flag.Parse()
 
 	connection, err := amqp.Dial(os.Getenv("AMQP_URL"))
@@ -59,6 +64,14 @@ func main() {
 	}
 	defer inputFile.Close()
 
+	fileStats, err := inputFile.Stat()
+	if err != nil {
+		log.Fatal("Stat input file:", err)
+	}
+
+	chunkSize := fileStats.Size() / int64(threadNum)
+	fmt.Println("Chunk size is", chunkSize)
+
 	var outputFile io.WriteCloser
 
 	if *outputFilePath != "" {
@@ -72,7 +85,7 @@ func main() {
 	wg := sync.WaitGroup{}
 
 	handlers := []Handler{
-		producer.New(inputFile),
+		producer.New(inputFile, chunkSize),
 		counter.New(),
 		frequency.New(*minLength),
 		sentiment.New(),
